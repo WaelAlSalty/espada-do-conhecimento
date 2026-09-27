@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sayf Al-Ma'rifa P2P - GitHub Pages Edition</title>
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    body {
+      background: #1a1614;
+      color: #ede6d6;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 15px;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 12px;
+    }
+    h1 {
+      color: #d4af37;
+      text-shadow: 0 2px 5px rgba(0, 0, 0, 0.8);
+      letter-spacing: 1px;
+    }
+    #lobby-section {
+      background: #25201c;
+      border: 2px solid #8b6d3b;
+      border-radius: 8px;
+      padding: 15px 25px;
+      margin-bottom: 15px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      align-items: center;
+      justify-content: center;
+      max-width: 900px;
+      width: 100%;
+    }
+    input, button {
+      padding: 8px 14px;
+      border-radius: 4px;
+      border: 1px solid #7c6245;
+      font-size: 14px;
+    }
+    input {
+      background: #151210;
+      color: #fff;
+    }
+    button {
+      background: #8b6d3b;
+      color: #fff;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:hover {
+      background: #b08a4b;
+    }
+    button:disabled {
+      background: #443c36;
+      cursor: not-allowed;
+    }
+    #game-container {
+      display: flex;
+      gap: 20px;
+      width: 100%;
+      max-width: 1100px;
+    }
+    #map-wrapper {
+      position: relative;
+      background: #241e1b;
+      border: 3px solid #8b6d3b;
+      border-radius: 8px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.6);
+    }
+    svg {
+      display: block;
+      width: 750px;
+      height: 550px;
+    }
+    .region-path {
+      cursor: pointer;
+      stroke: #14110f;
+      stroke-width: 3;
+      transition: fill 0.3s, filter 0.2s;
+    }
+    .region-path:hover {
+      filter: brightness(1.25);
+    }
+    .region-selected {
+      stroke: #ffff00 !important;
+      stroke-width: 5 !important;
+    }
+    .tower-group {
+      pointer-events: none;
+      user-select: none;
+    }
+    .tower-block {
+      fill: #e8dac1;
+      stroke: #2b2520;
+      stroke-width: 1.5;
+    }
+    .capital-flag {
+      fill: #ffd700;
+    }
+    #sidebar {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+    .panel {
+      background: #25201c;
+      border: 1px solid #574632;
+      border-radius: 6px;
+      padding: 15px;
+    }
+    .player-badge {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px;
+      margin-bottom: 6px;
+      border-radius: 4px;
+      background: rgba(0,0,0,0.3);
+    }
+    .player-color-box {
+      width: 18px;
+      height: 18px;
+      border-radius: 3px;
+    }
+    .active-badge {
+      border: 2px solid #ffcc00;
+      background: rgba(255, 204, 0, 0.12);
+    }
+    #question-modal {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 480px;
+      background: #241d19;
+      border: 3px solid #d4af37;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 0 35px rgba(0,0,0,0.9);
+      z-index: 100;
+    }
+    #timer-bar {
+      font-size: 18px;
+      font-weight: bold;
+      color: #ff5252;
+      text-align: right;
+      margin-bottom: 10px;
+    }
+    .option-btn {
+      display: block;
+      width: 100%;
+      padding: 12px;
+      margin: 8px 0;
+      background: #413426;
+      border: 1px solid #7c6245;
+      color: #fff;
+      font-size: 15px;
+      cursor: pointer;
+      border-radius: 4px;
+      text-align: left;
+    }
+    .option-btn:hover:not(:disabled) {
+      background: #5e4b37;
+    }
+    .option-btn:disabled {
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>سيف المعرفة - Sayf Al-Ma'rifa (P2P GitHub Edition)</h1>
+    <p>Conquiste o reino, derrube as 3 peças das capitais e jogue sem instalar nenhum backend.</p>
+  </header>
+
+  <div id="lobby-section">
+    <div>
+      <label>Seu Nome: </label>
+      <input type="text" id="username" value="Comandante 1">
+    </div>
+    <button id="btn-create" onclick="createRoom()">Criar Sala (Host)</button>
+    <div style="display: flex; gap: 6px;">
+      <input type="text" id="room-code-input" placeholder="ID da Sala...">
+      <button id="btn-join" onclick="joinRoom()">Entrar</button>
+    </div>
+    <div id="connection-status" style="width: 100%; font-size: 13px; color: #ffca28; text-align: center;"></div>
+  </div>
+
+  <div id="game-container">
+    <div id="map-wrapper">
+      <svg id="game-map" viewBox="0 0 800 600">
+        <!-- 9 Províncias Clássicas Interconectadas -->
+        <polygon id="r1" class="region-path" points="30,40 370,40 330,220 50,220" fill="#443c36" onclick="handleRegionClick('r1')"></polygon>
+        <polygon id="r2" class="region-path" points="370,40 430,40 500,220 330,220" fill="#443c36" onclick="handleRegionClick('r2')"></polygon>
+        <polygon id="r3" class="region-path" points="430,40 770,40 750,220 500,220" fill="#443c36" onclick="handleRegionClick('r3')"></polygon>
+        
+        <polygon id="r4" class="region-path" points="50,220 330,220 330,400 30,400" fill="#443c36" onclick="handleRegionClick('r4')"></polygon>
+        <polygon id="r5" class="region-path" points="330,220 500,220 500,400 330,400" fill="#443c36" onclick="handleRegionClick('r5')"></polygon>
+        <polygon id="r6" class="region-path" points="500,220 750,220 770,400 500,400" fill="#443c36" onclick="handleRegionClick('r6')"></polygon>
+        
+        <polygon id="r7" class="region-path" points="30,400 330,400 370,560 40,560" fill="#443c36" onclick="handleRegionClick('r7')"></polygon>
+        <polygon id="r8" class="region-path" points="330,400 500,400 430,560 370,560" fill="#443c36" onclick="handleRegionClick('r8')"></polygon>
+        <polygon id="r9" class="region-path" points="500,400 770,400 760,560 430,560" fill="#443c36" onclick="handleRegionClick('r9')"></polygon>
+
+        <g id="towers-layer"></g>
+      </svg>
+    </div>
+
+    <div id="sidebar">
+      <div class="panel">
+        <h3>Guerreiros na Sala</h3>
+        <div id="players-list" style="margin-top: 10px;">Crie ou entre em uma sala.</div>
+      </div>
+
+      <div class="panel">
+        <h3>Comandos</h3>
+        <p id="action-prompt" style="color: #ffd700; margin: 8px 0;">Aguardando início...</p>
+        <div style="font-size: 13px; color: #a89f91; line-height: 1.4;">
+          * A partida inicia automaticamente com <b>3 jogadores</b>.<br>
+          * Cada capital começa com <b>3 peças/andares</b>.<br>
+          * Conquiste territórios neutros ou invada capitais vizinhas.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="question-modal">
+    <div id="timer-bar">Tempo: 12s</div>
+    <h3 id="question-text" style="margin-bottom: 15px;">Pergunta</h3>
+    <div id="options-container"></div>
+  </div>
+
+  <script>
+    // --- TOPOLOGIA DO MAPA ---
+    const REGIONS = {
+      r1: { id: 'r1', neighbors: ['r2', 'r4'], center: { x: 180, y: 130 } },
+      r2: { id: 'r2', neighbors: ['r1', 'r3', 'r5'], center: { x: 400, y: 130 } },
+      r3: { id: 'r3', neighbors: ['r2', 'r6'], center: { x: 620, y: 130 } },
+      r4: { id: 'r4', neighbors: ['r1', 'r5', 'r7'], center: { x: 180, y: 310 } },
+      r5: { id: 'r5', neighbors: ['r2', 'r4', 'r6', 'r8'], center: { x: 415, y: 310 } },
+      r6: { id: 'r6', neighbors: ['r3', 'r5', 'r9'], center: { x: 635, y: 310 } },
+      r7: { id: 'r7', neighbors: ['r4', 'r8'], center: { x: 180, y: 480 } },
+      r8: { id: 'r8', neighbors: ['r5', 'r7', 'r9'], center: { x: 400, y: 480 } },
+      r9: { id: 'r9', neighbors: ['r6', 'r8'], center: { x: 620, y: 480 } }
+    };
+
+    const QUESTIONS = [
+      { q: 'Qual é a capital histórica do califado Abássida?', options: ['Bagdá', 'Damasco', 'Cairo', 'Córdoba'], a: 0 },
+      { q: 'Qual elemento químico possui o símbolo Au?', options: ['Prata', 'Ouro', 'Cobre', 'Ferro'], a: 1 },
+      { q: 'Quantos planetas compõem o sistema solar?', options: ['7', '8', '9', '10'], a: 1 },
+      { q: 'Qual é o maior oceano da Terra?', options: ['Atlântico', 'Índico', 'Ártico', 'Pacífico'], a: 3 },
+      { q: 'Em qual continente se localiza o deserto do Saara?', options: ['Ásia', 'África', 'Oceania', 'Europa'], a: 1 },
+      { q: 'Quem é considerado o pai da álgebra?', options: ['Al-Khwarizmi', 'Ibn Sina', 'Euclides', 'Pitágoras'], a: 0 }
+    ];
+
+    const PLAYER_COLORS = ['#c62828', '#1565c0', '#2e7d32'];
+    const CAPITAL_SEATS = ['r1', 'r3', 'r7'];
+
+    let peer = null;
+    let isHost = false;
+    let hostConn = null;
+    let clientConns = [];
+    let myPeerId = null;
+
+    let localGameState = {
+      phase: 'LOBBY',
+      players: [],
+      board: {},
+      activeTurnIndex: 0,
+      currentBattle: null
+    };
+
+    let selectedOrigin = null;
+    let battleInterval = null;
+
+    // --- REDE P2P PEERJS ---
+    function initPeer(callback) {
+      peer = new Peer();
+      peer.on('open', (id) => {
+        myPeerId = id;
+        callback(id);
+      });
+      peer.on('error', (err) => alert('Erro P2P: ' + err.type));
+    }
+
+    function createRoom() {
+      initPeer((id) => {
+        isHost = true;
+        document.getElementById('connection-status').innerHTML = `Sua sala foi criada! Compartilhe o ID: <b>${id}</b>`;
+        document.getElementById('btn-create').disabled = true;
+        document.getElementById('btn-join').disabled = true;
+
+        const name = document.getElementById('username').value || 'Host';
+        localGameState.players.push({
+          id: id,
+          name: name,
+          color: PLAYER_COLORS[0],
+          capital: null,
+          eliminated: false
+        });
+        renderPlayers();
+
+        peer.on('connection', (conn) => {
+          if (localGameState.players.length >= 3 || localGameState.phase !== 'LOBBY') {
+            conn.send({ type: 'ERROR', message: 'A sala está cheia.' });
+            return;
+          }
+
+          clientConns.push(conn);
+          conn.on('data', (data) => handleHostIncomingData(conn, data));
+          conn.on('close', () => handleHostPlayerDisconnect(conn.peer));
+        });
+      });
+    }
+
+    function joinRoom() {
+      const targetId = document.getElementById('room-code-input').value.trim();
+      if (!targetId) return alert('Insira o ID da sala!');
+
+      initPeer((id) => {
+        isHost = false;
+        document.getElementById('connection-status').innerText = 'Conectando ao Host...';
+        hostConn = peer.connect(targetId);
+
+        hostConn.on('open', () => {
+          document.getElementById('connection-status').innerText = 'Conectado! Aguardando o início.';
+          document.getElementById('btn-create').disabled = true;
+          document.getElementById('btn-join').disabled = true;
+          const name = document.getElementById('username').value || 'Jogador';
+          hostConn.send({ type: 'JOIN', name: name });
+        });
+
+        hostConn.on('data', (data) => handleClientIncomingData(data));
+      });
+    }
+
+    // --- LÓGICA DO HOST (SERVER AUTORITATIVO NO NAVEGADOR) ---
+    function handleHostIncomingData(conn, data) {
+      if (data.type === 'JOIN') {
+        const pIndex = localGameState.players.length;
+        localGameState.players.push({
+          id: conn.peer,
+          name: data.name,
+          color: PLAYER_COLORS[pIndex],
+          capital: null,
+          eliminated: false
+        });
+
+        if (localGameState.players.length === 3) {
+          hostStartGame();
+        } else {
+          hostBroadcastState();
+        }
+      }
+
+      if (data.type === 'ATTACK') {
+        hostProcessAttack(conn.peer, data.fromRegion, data.toRegion);
+      }
+
+      if (data.type === 'ANSWER') {
+        hostProcessAnswer(conn.peer, data.optionIndex);
+      }
+    }
+
+    function hostStartGame() {
+      for (const rId in REGIONS) {
+        localGameState.board[rId] = { ownerId: null, towers: 0, isCapital: false };
+      }
+
+      localGameState.players.forEach((p, idx) => {
+        const capId = CAPITAL_SEATS[idx];
+        p.capital = capId;
+        localGameState.board[capId] = { ownerId: p.id, towers: 3, isCapital: true };
+      });
+
+      localGameState.phase = 'BATTLE';
+      hostBroadcastState();
+    }
+
+    function hostBroadcastState() {
+      applyState(localGameState);
+      const payload = { type: 'STATE_UPDATE', state: localGameState };
+      clientConns.forEach(c => c.send(payload));
+    }
+
+    function hostProcessAttack(playerId, fromRegion, toRegion) {
+      const activePlayer = localGameState.players[localGameState.activeTurnIndex];
+      if (activePlayer.id !== playerId) return;
+      if (localGameState.currentBattle) return;
+
+      const source = localGameState.board[fromRegion];
+      const target = localGameState.board[toRegion];
+      if (!source || !target || source.ownerId !== playerId || target.ownerId === playerId) return;
+      if (!REGIONS[fromRegion].neighbors.includes(toRegion)) return;
+
+      const q = QUESTIONS[Math.floor(Math.random() * QUESTIONS.length)];
+      localGameState.currentBattle = {
+        fromRegion,
+        toRegion,
+        attackerId: playerId,
+        defenderId: target.ownerId,
+        question: { text: q.q, options: q.options },
+        correctAnswer: q.a,
+        answers: {},
+        timeLeft: 12
+      };
+
+      hostBroadcastState();
+
+      battleInterval = setInterval(() => {
+        if (!localGameState.currentBattle) {
+          clearInterval(battleInterval);
+          return;
+        }
+        localGameState.currentBattle.timeLeft -= 1;
+        const tick = { type: 'TIMER_TICK', seconds: localGameState.currentBattle.timeLeft };
+        applyTimerTick(tick.seconds);
+        clientConns.forEach(c => c.send(tick));
+
+        if (localGameState.currentBattle.timeLeft <= 0) {
+          clearInterval(battleInterval);
+          hostResolveBattle();
+        }
+      }, 1000);
+    }
+
+    function hostProcessAnswer(playerId, optionIndex) {
+      const battle = localGameState.currentBattle;
+      if (!battle) return;
+      if (playerId !== battle.attackerId && playerId !== battle.defenderId) return;
+      if (battle.answers[playerId] !== undefined) return;
+
+      battle.answers[playerId] = { option: optionIndex, time: 12 - battle.timeLeft };
+
+      const needDefender = battle.defenderId !== null;
+      const attDone = battle.answers[battle.attackerId] !== undefined;
+      const defDone = needDefender ? battle.answers[battle.defenderId] !== undefined : true;
+
+      if (attDone && defDone) {
+        clearInterval(battleInterval);
+        hostResolveBattle();
+      }
+    }
+
+    function hostResolveBattle() {
+      const battle = localGameState.currentBattle;
+      if (!battle) return;
+
+      const target = localGameState.board[battle.toRegion];
+      const attAns = battle.answers[battle.attackerId];
+      const defAns = battle.defenderId ? battle.answers[battle.defenderId] : null;
+
+      const attOk = attAns && attAns.option === battle.correctAnswer;
+      const defOk = defAns && defAns.option === battle.correctAnswer;
+
+      let attackerWon = false;
+      if (target.ownerId === null) {
+        attackerWon = attOk;
+      } else {
+        if (attOk && !defOk) attackerWon = true;
+        else if (attOk && defOk) attackerWon = attAns.time < defAns.time;
+      }
+
+      let msg = '';
+      if (attackerWon) {
+        if (target.isCapital) {
+          target.towers -= 1;
+          msg = `Ataque bem-sucedido! A capital inimiga perdeu 1 peça (${target.towers} restantes).`;
+          if (target.towers <= 0) {
+            const fallen = localGameState.players.find(p => p.id === target.ownerId);
+            fallen.eliminated = true;
+            for (const r in localGameState.board) {
+              if (localGameState.board[r].ownerId === fallen.id) {
+                localGameState.board[r].ownerId = battle.attackerId;
+                localGameState.board[r].isCapital = false;
+                localGameState.board[r].towers = 1;
+              }
+            }
+            target.ownerId = battle.attackerId;
+            target.towers = 1;
+            target.isCapital = false;
+            msg = 'A CAPITAL CAIU! Todo o império adversário foi conquistado!';
+          }
+        } else {
+          target.ownerId = battle.attackerId;
+          target.towers = 1;
+          msg = 'Território conquistado!';
+        }
+      } else {
+        msg = 'O ataque falhou!';
+      }
+
+      const resPayload = { type: 'BATTLE_RESULT', message: msg };
+      applyBattleResult(msg);
+      clientConns.forEach(c => c.send(resPayload));
+
+      localGameState.currentBattle = null;
+      hostPassTurn();
+    }
+
+    function hostPassTurn() {
+      let count = 0;
+      do {
+        localGameState.activeTurnIndex = (localGameState.activeTurnIndex + 1) % localGameState.players.length;
+        count++;
+      } while (localGameState.players[localGameState.activeTurnIndex].eliminated && count < localGameState.players.length);
+
+      const active = localGameState.players.filter(p => !p.eliminated);
+      if (active.length <= 1) {
+        localGameState.phase = 'FINISHED';
+        const winPayload = { type: 'GAME_OVER', winner: active[0] };
+        alert(`Vitória do jogador: ${active[0].name}`);
+        clientConns.forEach(c => c.send(winPayload));
+      }
+
+      hostBroadcastState();
+    }
+
+    function handleHostPlayerDisconnect(peerId) {
+      const p = localGameState.players.find(x => x.id === peerId);
+      if (p) {
+        p.eliminated = true;
+        for (const r in localGameState.board) {
+          if (localGameState.board[r].ownerId === peerId) {
+            localGameState.board[r].ownerId = null;
+            localGameState.board[r].towers = 0;
+          }
+        }
+        hostBroadcastState();
+      }
+    }
+
+    // --- RECEPTOR CLIENTE ---
+    function handleClientIncomingData(data) {
+      if (data.type === 'STATE_UPDATE') applyState(data.state);
+      if (data.type === 'TIMER_TICK') applyTimerTick(data.seconds);
+      if (data.type === 'BATTLE_RESULT') applyBattleResult(data.message);
+      if (data.type === 'GAME_OVER') alert(`FIM DE JOGO! Campeão: ${data.winner.name}`);
+      if (data.type === 'ERROR') alert(data.message);
+    }
+
+    // --- SINCRONIZAÇÃO E RENDERIZAÇÃO DA UI ---
+    function applyState(state) {
+      localGameState = state;
+      renderBoard();
+      renderPlayers();
+
+      const activePlayer = localGameState.players[localGameState.activeTurnIndex];
+      const isMyTurn = activePlayer && activePlayer.id === myPeerId;
+      const promptEl = document.getElementById('action-prompt');
+
+      if (localGameState.phase === 'BATTLE') {
+        promptEl.innerText = isMyTurn ? 'SEU TURNO: Clique no seu território para atacar.' : `Aguarde a vez de ${activePlayer ? activePlayer.name : '...'}`;
+      }
+
+      if (localGameState.currentBattle) {
+        openModal(localGameState.currentBattle);
+      } else {
+        closeModal();
+      }
+    }
+
+    function applyTimerTick(seconds) {
+      document.getElementById('timer-bar').innerText = `Tempo: ${seconds}s`;
+    }
+
+    function applyBattleResult(msg) {
+      alert(msg);
+      closeModal();
+      selectedOrigin = null;
+      document.querySelectorAll('.region-path').forEach(p => p.classList.remove('region-selected'));
+    }
+
+    function renderPlayers() {
+      const list = document.getElementById('players-list');
+      list.innerHTML = '';
+      localGameState.players.forEach((p, idx) => {
+        const isTurn = idx === localGameState.activeTurnIndex && localGameState.phase === 'BATTLE';
+        const div = document.createElement('div');
+        div.className = `player-badge ${isTurn ? 'active-badge' : ''}`;
+        div.innerHTML = `
+          <div class="player-color-box" style="background:${p.color};"></div>
+          <span>${p.name} ${p.id === myPeerId ? '<b>(Você)</b>' : ''} ${p.eliminated ? '<span style="color:#e53935;">[Derrotado]</span>' : ''}</span>
+        `;
+        list.appendChild(div);
+      });
+    }
+
+    function renderBoard() {
+      const towersLayer = document.getElementById('towers-layer');
+      towersLayer.innerHTML = '';
+
+      for (const rId in localGameState.board) {
+        const territory = localGameState.board[rId];
+        const pathEl = document.getElementById(rId);
+
+        if (territory.ownerId) {
+          const owner = localGameState.players.find(p => p.id === territory.ownerId);
+          pathEl.setAttribute('fill', owner ? owner.color : '#443c36');
+        } else {
+          pathEl.setAttribute('fill', '#38322c');
+        }
+
+        // Renderização exata das pecinhas empilhadas
+        if (territory.towers > 0) {
+          const center = REGIONS[rId].center;
+          const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          g.setAttribute('class', 'tower-group');
+
+          for (let i = 0; i < territory.towers; i++) {
+            const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            rect.setAttribute('x', center.x - 14);
+            rect.setAttribute('y', center.y - (i * 12));
+            rect.setAttribute('width', 28);
+            rect.setAttribute('height', 10);
+            rect.setAttribute('class', 'tower-block');
+            rect.setAttribute('rx', 2);
+            g.appendChild(rect);
+          }
+
+          if (territory.isCapital) {
+            const flag = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+            const topY = center.y - (territory.towers * 12);
+            flag.setAttribute('points', `${center.x},${topY - 14} ${center.x + 14},${topY - 8} ${center.x},${topY - 2}`);
+            flag.setAttribute('class', 'capital-flag');
+            g.appendChild(flag);
+          }
+
+          towersLayer.appendChild(g);
+        }
+      }
+    }
+
+    // --- INTERAÇÃO DO JOGADOR NO MAPA ---
+    function handleRegionClick(regionId) {
+      if (localGameState.phase !== 'BATTLE') return;
+      const activePlayer = localGameState.players[localGameState.activeTurnIndex];
+      if (!activePlayer || activePlayer.id !== myPeerId) return;
+
+      const board = localGameState.board;
+
+      if (!selectedOrigin) {
+        if (board[regionId].ownerId === myPeerId) {
+          selectedOrigin = regionId;
+          document.getElementById(regionId).classList.add('region-selected');
+          document.getElementById('action-prompt').innerText = 'Agora clique em um território vizinho para atacar!';
+        }
+      } else {
+        if (selectedOrigin === regionId) {
+          selectedOrigin = null;
+          document.querySelectorAll('.region-path').forEach(p => p.classList.remove('region-selected'));
+          document.getElementById('action-prompt').innerText = 'SEU TURNO: Clique no seu território para atacar.';
+        } else {
+          // Despachar ação de ataque
+          if (isHost) {
+            hostProcessAttack(myPeerId, selectedOrigin, regionId);
+          } else {
+            hostConn.send({ type: 'ATTACK', fromRegion: selectedOrigin, toRegion: regionId });
+          }
+        }
+      }
+    }
+
+    function openModal(battle) {
+      const modal = document.getElementById('question-modal');
+      const text = document.getElementById('question-text');
+      const optContainer = document.getElementById('options-container');
+
+      text.innerText = battle.question.text;
+      optContainer.innerHTML = '';
+
+      const isParticipant = battle.attackerId === myPeerId || battle.defenderId === myPeerId;
+
+      battle.question.options.forEach((opt, idx) => {
+        const btn = document.createElement('button');
+        btn.className = 'option-btn';
+        btn.innerText = opt;
+        btn.disabled = !isParticipant;
+
+        btn.onclick = () => {
+          if (isHost) {
+            hostProcessAnswer(myPeerId, idx);
+          } else {
+            hostConn.send({ type: 'ANSWER', optionIndex: idx });
+          }
+          Array.from(optContainer.children).forEach(b => b.disabled = true);
+          btn.style.background = '#8b6d3b';
+        };
+
+        optContainer.appendChild(btn);
+      });
+
+      modal.style.display = 'block';
+    }
+
+    function closeModal() {
+      document.getElementById('question-modal').style.display = 'none';
+    }
+  </script>
+</body>
+</html>
