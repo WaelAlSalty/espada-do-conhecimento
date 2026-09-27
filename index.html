@@ -2,266 +2,480 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sayf Al-Ma'rifa - Mapa Mundi Real P2P</title>
-  <!-- PeerJS para Multiplayer sem Servidor -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>سيف المعرفة - Espada do Conhecimento</title>
+  <!-- PeerJS para Multiplayer P2P sem Servidor -->
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <!-- D3 e TopoJSON para projeção e renderização do mapa mundial real -->
+  <!-- D3 e TopoJSON para Projeção Geográfica Real -->
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <script src="https://unpkg.com/topojson-client@3"></script>
   <style>
+    :root {
+      --bg-main: #0f1217;
+      --bg-panel: #1a202c;
+      --gold-primary: #d4af37;
+      --gold-border: #8b6d3b;
+      --ocean-blue: #09131d;
+      --land-base: #253342;
+      --font-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
-    body {
-      background: #12151a;
-      color: #ede6d6;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      min-height: 100vh;
-      padding: 15px;
-    }
-    header {
-      text-align: center;
-      margin-bottom: 12px;
-    }
-    h1 {
-      color: #d4af37;
-      text-shadow: 0 2px 5px rgba(0, 0, 0, 0.8);
-      letter-spacing: 1px;
-    }
-    #lobby-section {
-      background: #1b2028;
-      border: 2px solid #8b6d3b;
-      border-radius: 8px;
-      padding: 15px 25px;
-      margin-bottom: 15px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 15px;
-      align-items: center;
-      justify-content: center;
-      max-width: 1200px;
-      width: 100%;
-    }
-    input, button {
-      padding: 8px 14px;
-      border-radius: 4px;
-      border: 1px solid #7c6245;
-      font-size: 14px;
-    }
-    input {
-      background: #0f1217;
-      color: #fff;
-    }
-    button {
-      background: #8b6d3b;
-      color: #fff;
-      font-weight: bold;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    button:hover {
-      background: #b08a4b;
-    }
-    button:disabled {
-      background: #373e4a;
-      cursor: not-allowed;
-    }
-    #game-container {
-      display: flex;
-      gap: 20px;
-      width: 100%;
-      max-width: 1280px;
-    }
-    #map-wrapper {
-      position: relative;
-      background: #0d1b2a; /* Cor do oceano */
-      border: 3px solid #8b6d3b;
-      border-radius: 8px;
-      box-shadow: 0 8px 25px rgba(0,0,0,0.8);
-      overflow: hidden;
-    }
-    svg {
-      display: block;
-      width: 900px;
-      height: 560px;
-    }
-    .country-path {
-      cursor: pointer;
-      stroke: #1b263b;
-      stroke-width: 0.75;
-      transition: fill 0.25s, filter 0.2s;
-    }
-    .country-path:hover {
-      filter: brightness(1.35);
-      stroke: #ffffff;
-      stroke-width: 1.5;
-    }
-    .country-selected {
-      stroke: #ffff00 !important;
-      stroke-width: 2.5 !important;
-    }
-    .tower-group {
-      pointer-events: none;
+      -webkit-tap-highlight-color: transparent;
       user-select: none;
     }
-    .tower-block {
-      fill: #f5eedb;
-      stroke: #222;
-      stroke-width: 1;
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg-main);
+      color: #f0ede6;
+      font-family: var(--font-stack);
     }
-    .capital-flag {
-      fill: #ffd700;
-      stroke: #997a00;
-      stroke-width: 0.5;
-    }
-    #sidebar {
-      flex: 1;
+
+    body {
       display: flex;
       flex-direction: column;
-      gap: 15px;
     }
-    .panel {
-      background: #1b2028;
-      border: 1px solid #414b5c;
-      border-radius: 6px;
-      padding: 15px;
+
+    /* BARRA SUPERIOR / HUD ESTILO CLÁSSICO */
+    header {
+      background: linear-gradient(180deg, #1c2430 0%, #10151d 100%);
+      border-bottom: 2px solid var(--gold-border);
+      padding: 6px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      z-index: 10;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.6);
     }
-    .player-badge {
+
+    .top-bar {
       display: flex;
       align-items: center;
-      gap: 10px;
-      padding: 8px;
-      margin-bottom: 6px;
-      border-radius: 4px;
-      background: rgba(0,0,0,0.3);
+      justify-content: space-between;
     }
-    .player-color-box {
-      width: 18px;
-      height: 18px;
-      border-radius: 3px;
+
+    .brand-title {
+      font-size: 15px;
+      font-weight: bold;
+      color: var(--gold-primary);
+      text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+      letter-spacing: 0.5px;
     }
-    .active-badge {
-      border: 2px solid #ffcc00;
-      background: rgba(255, 204, 0, 0.12);
+
+    .hud-players {
+      display: flex;
+      gap: 6px;
+      width: 100%;
+      justify-content: space-between;
     }
-    #question-modal {
+
+    .player-card {
+      flex: 1;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+      padding: 4px 6px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: all 0.25s ease;
+      min-width: 0;
+    }
+
+    .player-card.active-turn {
+      border: 2px solid var(--gold-primary);
+      background: rgba(212, 175, 55, 0.15);
+      box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+    }
+
+    .player-card.eliminated {
+      opacity: 0.4;
+      filter: grayscale(1);
+    }
+
+    .player-name-row {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      width: 100%;
+      justify-content: center;
+    }
+
+    .player-indicator {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      border: 1px solid rgba(255,255,255,0.6);
+    }
+
+    .player-name {
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .player-towers-count {
+      font-size: 10px;
+      color: #d1d5db;
+      margin-top: 2px;
+    }
+
+    /* CONTAINER PRINCIPAL DO MAPA */
+    #map-viewport {
+      flex: 1;
+      width: 100%;
+      position: relative;
+      background: var(--ocean-blue);
+      overflow: hidden;
+      touch-action: none;
+    }
+
+    svg#game-svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .country-shape {
+      cursor: pointer;
+      stroke: #101c29;
+      stroke-width: 0.5;
+      transition: fill 0.2s, stroke 0.2s;
+    }
+
+    .country-selected {
+      stroke: #fffb00 !important;
+      stroke-width: 2 !important;
+      filter: drop-shadow(0 0 6px #fffb00);
+    }
+
+    .tower-group {
+      pointer-events: none;
+    }
+
+    .tower-brick {
+      fill: #f5eedb;
+      stroke: #2b1f14;
+      stroke-width: 0.8;
+    }
+
+    .flag-shape {
+      fill: #ffd700;
+      stroke: #b38600;
+      stroke-width: 0.5;
+    }
+
+    /* BARRA INFORMATIVA INFERIOR (MOBILE TICKER) */
+    #status-ticker {
+      background: #141b24;
+      border-top: 1px solid var(--gold-border);
+      padding: 8px 12px;
+      font-size: 13px;
+      color: #f7df94;
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-weight: 500;
+    }
+
+    /* CONTROLES DE ZOOM FLUTUANTES */
+    .zoom-controls {
+      position: absolute;
+      right: 12px;
+      bottom: 60px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      z-index: 5;
+    }
+
+    .zoom-btn {
+      width: 38px;
+      height: 38px;
+      background: rgba(26, 32, 44, 0.85);
+      border: 1px solid var(--gold-border);
+      color: #fff;
+      font-size: 18px;
+      font-weight: bold;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    }
+
+    .zoom-btn:active {
+      background: var(--gold-border);
+    }
+
+    /* MODAL DE LOBBY / CONEXÃO */
+    #lobby-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 50;
+    }
+
+    .lobby-box {
+      width: 100%;
+      max-width: 420px;
+      background: var(--bg-panel);
+      border: 2px solid var(--gold-border);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.9);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .lobby-box h2 {
+      font-size: 18px;
+      color: var(--gold-primary);
+      text-align: center;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    label {
+      font-size: 12px;
+      color: #cbd5e1;
+      font-weight: 500;
+    }
+
+    input[type="text"] {
+      background: #0f141c;
+      border: 1px solid #475569;
+      border-radius: 6px;
+      padding: 10px;
+      color: #fff;
+      font-size: 14px;
+      outline: none;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--gold-primary);
+    }
+
+    .btn-action {
+      background: linear-gradient(180deg, #b08a4b 0%, #8b6d3b 100%);
+      color: #fff;
+      border: none;
+      padding: 12px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.4);
+    }
+
+    .btn-action:disabled {
+      background: #475569;
+      cursor: not-allowed;
+    }
+
+    .divider {
+      text-align: center;
+      font-size: 12px;
+      color: #64748b;
+      position: relative;
+      margin: 4px 0;
+    }
+
+    /* MODAL DE PERGUNTA MOBILE (DUELO) */
+    #battle-modal {
       display: none;
       position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 520px;
-      background: #1b2028;
-      border: 3px solid #d4af37;
-      border-radius: 8px;
-      padding: 22px;
-      box-shadow: 0 0 40px rgba(0,0,0,0.95);
+      inset: 0;
+      background: rgba(0,0,0,0.85);
       z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
     }
-    #timer-bar {
-      font-size: 20px;
-      font-weight: bold;
-      color: #ff5252;
-      text-align: right;
-      margin-bottom: 12px;
-    }
-    .option-btn {
-      display: block;
+
+    .battle-card {
       width: 100%;
-      padding: 12px;
-      margin: 8px 0;
-      background: #2a3342;
-      border: 1px solid #57657d;
-      color: #fff;
+      max-width: 480px;
+      background: #1a222e;
+      border: 2px solid var(--gold-primary);
+      border-radius: 12px;
+      padding: 18px;
+      box-shadow: 0 0 40px rgba(0,0,0,0.9);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .battle-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      padding-bottom: 8px;
+    }
+
+    .battle-badge {
+      font-size: 12px;
+      font-weight: bold;
+      color: var(--gold-primary);
+      text-transform: uppercase;
+    }
+
+    .battle-timer {
+      font-size: 18px;
+      font-weight: 800;
+      color: #ef4444;
+    }
+
+    .battle-question {
       font-size: 15px;
-      cursor: pointer;
-      border-radius: 4px;
+      color: #fff;
+      font-weight: 600;
+      line-height: 1.4;
+      margin: 4px 0;
+    }
+
+    .battle-options {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .opt-btn {
+      width: 100%;
+      background: #273444;
+      border: 1px solid #485c75;
+      color: #fff;
+      padding: 12px 14px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
       text-align: left;
+      cursor: pointer;
+      transition: background 0.15s;
     }
-    .option-btn:hover:not(:disabled) {
-      background: #3c495e;
+
+    .opt-btn:active:not(:disabled) {
+      background: var(--gold-border);
     }
-    .option-btn:disabled {
+
+    .opt-btn:disabled {
+      opacity: 0.5;
       cursor: not-allowed;
-      opacity: 0.6;
     }
+
+    /* TOOLTIP FLUTUANTE */
     #country-tooltip {
       position: absolute;
-      background: rgba(0, 0, 0, 0.85);
-      color: #ffd700;
+      background: rgba(15, 20, 28, 0.95);
+      border: 1px solid var(--gold-primary);
+      color: #fff;
       padding: 4px 8px;
-      font-size: 12px;
+      font-size: 11px;
       border-radius: 4px;
-      border: 1px solid #ffd700;
       pointer-events: none;
       display: none;
-      z-index: 50;
+      z-index: 40;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.6);
     }
   </style>
 </head>
 <body>
 
+  <!-- CABEÇALHO COM HUD DE JOGADORES -->
   <header>
-    <h1>سيف المعرفة - Sayf Al-Ma'rifa (Edição Mapa Mundi Real)</h1>
-    <p>Mapa Geográfico Real Oficial via TopoJSON. Conquiste os países do globo terrestre.</p>
+    <div class="top-bar">
+      <span class="brand-title">سيف المعرفة</span>
+      <span id="room-code-tag" style="font-size: 11px; color: #94a3b8;">Aguardando Sala</span>
+    </div>
+    <div class="hud-players" id="hud-players-container">
+      <div class="player-card"><span class="player-name">Aguardando...</span></div>
+      <div class="player-card"><span class="player-name">Aguardando...</span></div>
+      <div class="player-card"><span class="player-name">Aguardando...</span></div>
+    </div>
   </header>
 
-  <div id="lobby-section">
-    <div>
-      <label>Seu Nome: </label>
-      <input type="text" id="username" value="General 1">
-    </div>
-    <button id="btn-create" onclick="createRoom()">Criar Sala (Host)</button>
-    <div style="display: flex; gap: 6px;">
-      <input type="text" id="room-code-input" placeholder="ID da Sala...">
-      <button id="btn-join" onclick="joinRoom()">Entrar</button>
-    </div>
-    <div id="connection-status" style="width: 100%; font-size: 13px; color: #ffca28; text-align: center;"></div>
-  </div>
-
-  <div id="game-container">
-    <div id="map-wrapper">
-      <svg id="world-map" viewBox="0 0 900 560">
+  <!-- MAPA MUNDIAL EM D3.JS COM ZOOM TOUCH/MOUSE -->
+  <div id="map-viewport">
+    <svg id="game-svg">
+      <g id="map-transform-group">
         <g id="countries-layer"></g>
         <g id="towers-layer"></g>
-      </svg>
-      <div id="country-tooltip"></div>
-    </div>
+      </g>
+    </svg>
 
-    <div id="sidebar">
-      <div class="panel">
-        <h3>Guerreiros na Sala</h3>
-        <div id="players-list" style="margin-top: 10px;">Crie ou entre em uma sala.</div>
-      </div>
+    <div id="country-tooltip"></div>
 
-      <div class="panel">
-        <h3>Status da Guerra</h3>
-        <p id="action-prompt" style="color: #ffd700; margin: 8px 0;">Carregando mapa mundial...</p>
-        <div style="font-size: 13px; color: #b8c1cf; line-height: 1.5;">
-          * Mapa mundial geopolítico real com fronteiras autênticas.<br>
-          * 3 jogadores disputam capitais globais: <b>Brasil</b>, <b>Egito</b> e <b>Rússia</b>.<br>
-          * Capitais contêm <b>3 peças/torres empilhadas</b> com a bandeira dourada.<br>
-          * Selecione um país sob seu domínio e ataque outro país para disputar o território.
-        </div>
-      </div>
+    <div class="zoom-controls">
+      <div class="zoom-btn" onclick="zoomMap(1.35)">+</div>
+      <div class="zoom-btn" onclick="zoomMap(0.75)">−</div>
+      <div class="zoom-btn" onclick="resetZoom()">⟲</div>
     </div>
   </div>
 
-  <div id="question-modal">
-    <div id="timer-bar">Tempo: 12s</div>
-    <h3 id="question-text" style="margin-bottom: 15px;">Pergunta</h3>
-    <div id="options-container"></div>
+  <!-- TICKER INFORMATIVO INFERIOR -->
+  <div id="status-ticker">Carregando mapa geopolítico global...</div>
+
+  <!-- MODAL DE ENTRADA / LOBBY P2P -->
+  <div id="lobby-overlay">
+    <div class="lobby-box">
+      <h2>Espada do Conhecimento</h2>
+      
+      <div class="form-group">
+        <label>Seu Nome de Comandante</label>
+        <input type="text" id="player-nickname" value="General">
+      </div>
+
+      <button class="btn-action" id="btn-create-room" onclick="createRoom()">Criar Nova Partida (Host)</button>
+
+      <div class="divider">— OU ENTRE EM UMA SALA —</div>
+
+      <div class="form-group">
+        <input type="text" id="target-room-id" placeholder="Cole aqui o ID da Sala">
+      </div>
+
+      <button class="btn-action" id="btn-join-room" onclick="joinRoom()">Conectar à Sala</button>
+      
+      <p id="lobby-feedback" style="font-size: 12px; color: #f59e0b; text-align: center; display: none;"></p>
+    </div>
+  </div>
+
+  <!-- MODAL DE DUELO DE PERGUNTAS -->
+  <div id="battle-modal">
+    <div class="battle-card">
+      <div class="battle-header">
+        <span class="battle-badge" id="battle-badge">Combate Territorial</span>
+        <span class="battle-timer" id="battle-timer">12s</span>
+      </div>
+      <p class="battle-question" id="battle-question-text">Carregando pergunta...</p>
+      <div class="battle-options" id="battle-options-box"></div>
+    </div>
   </div>
 
   <script>
-    // Capitais mundiais clássicas para os 3 jogadores (Códigos Numéricos ISO 3166-1)
-    // 076: Brasil (Américas), 818: Egito (África/Oriente Médio), 643: Rússia (Eurásia)
+    // Códigos Numéricos ISO 3166-1 (com pad de 3 dígitos)
+    // 076: Brasil | 818: Egito | 643: Rússia
     const CAPITAL_SEATS = ['076', '818', '643'];
 
     const COUNTRY_NAMES = {
@@ -281,25 +495,30 @@
       '682': 'Arábia Saudita',
       '792': 'Turquia',
       '392': 'Japão',
-      '484': 'México'
+      '484': 'México',
+      '068': 'Bolívia',
+      '170': 'Colômbia',
+      '604': 'Peru',
+      '152': 'Chile'
     };
 
     const QUESTIONS = [
       { q: 'Qual é o maior país do mundo em extensão territorial?', options: ['Canadá', 'Rússia', 'China', 'Estados Unidos'], a: 1 },
-      { q: 'Qual o rio mais extenso do planeta Terra?', options: ['Rio Nilo', 'Rio Amazonas', 'Rio Yangtzé', 'Rio Mississippi'], a: 1 },
-      { q: 'Em qual país se localizam as ruínas da cidade de Petra?', options: ['Jordânia', 'Egito', 'Líbano', 'Iraque'], a: 0 },
-      { q: 'Qual é a capital histórica do califado Abássida?', options: ['Bagdá', 'Damasco', 'Cairo', 'Córdoba'], a: 0 },
-      { q: 'Qual elemento químico possui o símbolo Au?', options: ['Prata', 'Ouro', 'Cobre', 'Ferro'], a: 1 },
-      { q: 'Qual país tem a maior população do mundo?', options: ['China', 'Índia', 'Estados Unidos', 'Indonésia'], a: 1 },
-      { q: 'Quantos oceanos existem oficialmente na Terra?', options: ['4', '5', '6', '7'], a: 1 },
-      { q: 'Quem formulou a Teoria da Relatividade Geral?', options: ['Isaac Newton', 'Albert Einstein', 'Nikola Tesla', 'Galileu Galilei'], a: 1 }
+      { q: 'Qual o rio mais extenso em volume do planeta Terra?', options: ['Rio Nilo', 'Rio Amazonas', 'Rio Yangtzé', 'Rio Mississippi'], a: 1 },
+      { q: 'Em qual nação localizam-se as ruínas da lendária cidade de Petra?', options: ['Jordânia', 'Egito', 'Líbano', 'Iraque'], a: 0 },
+      { q: 'Qual elemento químico possui o símbolo Au na tabela periódica?', options: ['Prata', 'Ouro', 'Cobre', 'Platina'], a: 1 },
+      { q: 'Qual civilização construiu a cidade de Machu Picchu nos Andes?', options: ['Maias', 'Astecas', 'Incas', 'Toltecas'], a: 2 },
+      { q: 'Em qual oceano situa-se o ponto mais profundo do mundo (Fossa das Marianas)?', options: ['Atlântico', 'Índico', 'Ártico', 'Pacífico'], a: 3 },
+      { q: 'Qual cientista propôs as três leis fundamentais do movimento dos corpos?', options: ['Albert Einstein', 'Isaac Newton', 'Galileu Galilei', 'Johannes Kepler'], a: 1 },
+      { q: 'Qual matemático é amplamente considerado o pioneiro e pai da álgebra?', options: ['Al-Khwarizmi', 'Ibn Sina', 'Euclides', 'Arquimedes'], a: 0 }
     ];
 
-    const PLAYER_COLORS = ['#c62828', '#1565c0', '#2e7d32']; // Vermelho, Azul, Verde
+    const PLAYER_COLORS = ['#dc2626', '#2563eb', '#16a34a']; // Vermelho, Azul, Verde
 
     let worldGeoJson = null;
     let countryCentroids = {};
-    let svgPathGenerator = null;
+    let svgZoom = null;
+    let d3Svg = null;
 
     let peer = null;
     let isHost = false;
@@ -310,7 +529,7 @@
     let localGameState = {
       phase: 'LOBBY',
       players: [],
-      board: {}, // { [countryId]: { ownerId, towers, isCapital, name } }
+      board: {},
       activeTurnIndex: 0,
       currentBattle: null
     };
@@ -318,96 +537,140 @@
     let selectedOrigin = null;
     let battleInterval = null;
 
-    // --- CARREGAMENTO DO MAPA MUNDIAL REAL (TOPOJSON) ---
-    async function loadWorldMap() {
+    // Normalizador de ID ISO de País (Resolve o TypeError de undefined e números)
+    function sanitizeCountryId(rawId) {
+      if (rawId === undefined || rawId === null) return null;
+      let str = rawId.toString();
+      while (str.length < 3) {
+        str = '0' + str;
+      }
+      return str;
+    }
+
+    // --- CARREGAMENTO DO MAPA MUNDIAL COM D3 + TOPOJSON ---
+    async function initMapEngine() {
       try {
         const response = await fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json');
         const worldData = await response.json();
         
         worldGeoJson = topojson.feature(worldData, worldData.objects.countries);
 
-        const svg = d3.select('#world-map');
-        const width = 900;
-        const height = 560;
+        const viewport = document.getElementById('map-viewport');
+        const width = viewport.clientWidth || window.innerWidth;
+        const height = viewport.clientHeight || (window.innerHeight - 100);
 
-        // Projeção Cartográfica Equirretangular ajustada para a tela
+        d3Svg = d3.select('#game-svg')
+          .attr('viewBox', `0 0 ${width} ${height}`);
+
+        const mapGroup = d3.select('#map-transform-group');
+
+        // Projeção Equirretangular ajustada ao display móvel
         const projection = d3.geoEquirectangular()
-          .scale(140)
+          .scale(width / 6.2)
           .translate([width / 2, height / 1.7]);
 
-        svgPathGenerator = d3.geoPath().projection(projection);
+        const pathGenerator = d3.geoPath().projection(projection);
+
+        // Sistema de Zoom e Pan Touch
+        svgZoom = d3.zoom()
+          .scaleExtent([0.8, 8])
+          .on('zoom', (event) => {
+            mapGroup.attr('transform', event.transform);
+          });
+
+        d3Svg.call(svgZoom);
 
         const countriesLayer = d3.select('#countries-layer');
         const tooltip = document.getElementById('country-tooltip');
 
-        // Renderiza cada país real como path geográfico
+        // Filtra e desenha apenas feições válidas
+        const validFeatures = worldGeoJson.features.filter(f => f && f.id !== undefined);
+
         countriesLayer.selectAll('path')
-          .data(worldGeoJson.features)
+          .data(validFeatures)
           .enter()
           .append('path')
-          .attr('class', 'country-path')
-          .attr('id', d => `c_${d.id}`)
-          .attr('d', svgPathGenerator)
-          .attr('fill', '#263238')
-          .on('click', (event, d) => handleCountryClick(d.id.toString()))
+          .attr('class', 'country-shape')
+          .attr('id', d => `c_${sanitizeCountryId(d.id)}`)
+          .attr('d', pathGenerator)
+          .attr('fill', 'var(--land-base)')
+          .on('click', (event, d) => {
+            const cleanId = sanitizeCountryId(d.id);
+            if (cleanId) handleCountryTouch(cleanId);
+          })
           .on('mousemove', (event, d) => {
-            const id = d.id.toString();
-            const name = COUNTRY_NAMES[id] || `País (${id})`;
+            const cleanId = sanitizeCountryId(d.id);
+            const name = COUNTRY_NAMES[cleanId] || `Território (${cleanId})`;
             tooltip.style.display = 'block';
-            tooltip.style.left = (event.pageX + 10) + 'px';
-            tooltip.style.top = (event.pageY - 25) + 'px';
+            tooltip.style.left = (event.pageX + 8) + 'px';
+            tooltip.style.top = (event.pageY - 26) + 'px';
             tooltip.innerText = name;
           })
           .on('mouseleave', () => {
             tooltip.style.display = 'none';
           });
 
-        // Pré-calcula centróides geográficos para posicionar as torres
-        worldGeoJson.features.forEach(feature => {
-          const centroid = svgPathGenerator.centroid(feature);
-          if (!isNaN(centroid[0]) && !isNaN(centroid[1])) {
-            countryCentroids[feature.id.toString()] = { x: centroid[0], y: centroid[1] };
-          }
-        });
+        // Calcula com segurança os centróides para cada território
+        validFeatures.forEach(feature => {
+          const cleanId = sanitizeCountryId(feature.id);
+          if (!cleanId) return;
 
-        // Inicializa o tabuleiro vazio com todos os países reais
-        worldGeoJson.features.forEach(f => {
-          const id = f.id.toString();
-          localGameState.board[id] = {
+          const centroid = pathGenerator.centroid(feature);
+          if (!isNaN(centroid[0]) && !isNaN(centroid[1])) {
+            countryCentroids[cleanId] = { x: centroid[0], y: centroid[1] };
+          }
+
+          // Preenche a malha de dados garantindo que nenhum país seja undefined
+          localGameState.board[cleanId] = {
             ownerId: null,
             towers: 0,
             isCapital: false,
-            name: COUNTRY_NAMES[id] || `País ${id}`
+            name: COUNTRY_NAMES[cleanId] || `Território ${cleanId}`
           };
         });
 
-        document.getElementById('action-prompt').innerText = 'Mapa carregado. Crie ou entre em uma sala.';
+        document.getElementById('status-ticker').innerText = 'Toque em Criar ou Entrar para iniciar a guerra.';
       } catch (err) {
-        alert('Erro ao carregar os dados geográficos do mapa mundial.');
         console.error(err);
+        document.getElementById('status-ticker').innerText = 'Erro ao renderizar dados topográficos do mapa.';
       }
     }
 
-    window.onload = loadWorldMap;
+    window.addEventListener('load', initMapEngine);
 
-    // --- REDE P2P PEERJS ---
-    function initPeer(callback) {
+    // Controles Touch de Zoom
+    function zoomMap(scaleFactor) {
+      if (!d3Svg || !svgZoom) return;
+      d3Svg.transition().duration(250).call(svgZoom.scaleBy, scaleFactor);
+    }
+
+    function resetZoom() {
+      if (!d3Svg || !svgZoom) return;
+      d3Svg.transition().duration(350).call(svgZoom.transform, d3.zoomIdentity);
+    }
+
+    // --- CONEXÃO P2P PEERJS MULTIPLAYER ---
+    function initPeerEngine(callback) {
       peer = new Peer();
       peer.on('open', (id) => {
         myPeerId = id;
         callback(id);
       });
-      peer.on('error', (err) => alert('Erro P2P: ' + err.type));
+      peer.on('error', (err) => {
+        showFeedback('Erro na rede P2P: ' + err.type);
+      });
     }
 
     function createRoom() {
-      initPeer((id) => {
-        isHost = true;
-        document.getElementById('connection-status').innerHTML = `Sua sala foi criada! Compartilhe o ID: <b>${id}</b>`;
-        document.getElementById('btn-create').disabled = true;
-        document.getElementById('btn-join').disabled = true;
+      const name = document.getElementById('player-nickname').value.trim() || 'Comandante 1';
+      showFeedback('Criando sala autoritativa...');
 
-        const name = document.getElementById('username').value || 'Host';
+      initPeerEngine((id) => {
+        isHost = true;
+        document.getElementById('lobby-overlay').style.display = 'none';
+        document.getElementById('room-code-tag').innerText = `ID: ${id}`;
+        document.getElementById('status-ticker').innerText = `Sala: ${id} | Compartilhe com 2 amigos.`;
+
         localGameState.players.push({
           id: id,
           name: name,
@@ -415,44 +678,56 @@
           capital: null,
           eliminated: false
         });
-        renderPlayers();
+
+        updateHUD();
 
         peer.on('connection', (conn) => {
           if (localGameState.players.length >= 3 || localGameState.phase !== 'LOBBY') {
-            conn.send({ type: 'ERROR', message: 'A sala está cheia.' });
+            conn.send({ type: 'ERROR', message: 'A sala já está cheia ou em combate.' });
             return;
           }
 
           clientConns.push(conn);
-          conn.on('data', (data) => handleHostIncomingData(conn, data));
-          conn.on('close', () => handleHostPlayerDisconnect(conn.peer));
+          conn.on('data', (data) => hostHandleData(conn, data));
+          conn.on('close', () => hostHandlePlayerExit(conn.peer));
         });
       });
     }
 
     function joinRoom() {
-      const targetId = document.getElementById('room-code-input').value.trim();
-      if (!targetId) return alert('Insira o ID da sala!');
+      const targetId = document.getElementById('target-room-id').value.trim();
+      const name = document.getElementById('player-nickname').value.trim() || 'Combatente';
 
-      initPeer((id) => {
+      if (!targetId) {
+        showFeedback('Por favor, informe o código da sala.');
+        return;
+      }
+
+      showFeedback('Conectando ao Host...');
+
+      initPeerEngine((id) => {
         isHost = false;
-        document.getElementById('connection-status').innerText = 'Conectando ao Host...';
         hostConn = peer.connect(targetId);
 
         hostConn.on('open', () => {
-          document.getElementById('connection-status').innerText = 'Conectado! Aguardando o início.';
-          document.getElementById('btn-create').disabled = true;
-          document.getElementById('btn-join').disabled = true;
-          const name = document.getElementById('username').value || 'Jogador';
+          document.getElementById('lobby-overlay').style.display = 'none';
+          document.getElementById('room-code-tag').innerText = `Conectado ao Host`;
+          document.getElementById('status-ticker').innerText = 'Conectado. Aguardando a partida começar...';
           hostConn.send({ type: 'JOIN', name: name });
         });
 
-        hostConn.on('data', (data) => handleClientIncomingData(data));
+        hostConn.on('data', (data) => clientHandleData(data));
       });
     }
 
-    // --- LÓGICA DO SERVIDOR AUTORITATIVO NO HOST ---
-    function handleHostIncomingData(conn, data) {
+    function showFeedback(text) {
+      const el = document.getElementById('lobby-feedback');
+      el.style.display = 'block';
+      el.innerText = text;
+    }
+
+    // --- REGRAS DO JOGO NO HOST (AUTORITATIVO) ---
+    function hostHandleData(conn, data) {
       if (data.type === 'JOIN') {
         const pIndex = localGameState.players.length;
         localGameState.players.push({
@@ -464,54 +739,57 @@
         });
 
         if (localGameState.players.length === 3) {
-          hostStartGame();
+          hostStartCombat();
         } else {
-          hostBroadcastState();
+          hostSyncClients();
         }
       }
 
       if (data.type === 'ATTACK') {
-        hostProcessAttack(conn.peer, data.fromCountry, data.toCountry);
+        hostExecuteAttack(conn.peer, data.from, data.to);
       }
 
       if (data.type === 'ANSWER') {
-        hostProcessAnswer(conn.peer, data.optionIndex);
+        hostRegisterAnswer(conn.peer, data.optionIndex);
       }
     }
 
-    function hostStartGame() {
-      // Configurar as capitais mundiais clássicas com 3 peças empilhadas
+    function hostStartCombat() {
+      // Distribui as Capitais Mundiais com 3 Torres Empilhadas
       localGameState.players.forEach((p, idx) => {
         const capId = CAPITAL_SEATS[idx];
         p.capital = capId;
-        localGameState.board[capId].ownerId = p.id;
-        localGameState.board[capId].towers = 3;
-        localGameState.board[capId].isCapital = true;
+        if (localGameState.board[capId]) {
+          localGameState.board[capId].ownerId = p.id;
+          localGameState.board[capId].towers = 3;
+          localGameState.board[capId].isCapital = true;
+        }
       });
 
       localGameState.phase = 'BATTLE';
-      hostBroadcastState();
+      hostSyncClients();
     }
 
-    function hostBroadcastState() {
-      applyState(localGameState);
-      const payload = { type: 'STATE_UPDATE', state: localGameState };
+    function hostSyncClients() {
+      applyGameState(localGameState);
+      const payload = { type: 'SYNC_STATE', state: localGameState };
       clientConns.forEach(c => c.send(payload));
     }
 
-    function hostProcessAttack(playerId, fromCountry, toCountry) {
+    function hostExecuteAttack(playerId, fromId, toId) {
       const activePlayer = localGameState.players[localGameState.activeTurnIndex];
-      if (activePlayer.id !== playerId) return;
+      if (!activePlayer || activePlayer.id !== playerId) return;
       if (localGameState.currentBattle) return;
 
-      const source = localGameState.board[fromCountry];
-      const target = localGameState.board[toCountry];
+      const source = localGameState.board[fromId];
+      const target = localGameState.board[toId];
+
       if (!source || !target || source.ownerId !== playerId || target.ownerId === playerId) return;
 
       const q = QUESTIONS[Math.floor(Math.random() * QUESTIONS.length)];
       localGameState.currentBattle = {
-        fromCountry,
-        toCountry,
+        fromId,
+        toId,
         attackerId: playerId,
         defenderId: target.ownerId,
         question: { text: q.q, options: q.options },
@@ -520,26 +798,27 @@
         timeLeft: 12
       };
 
-      hostBroadcastState();
+      hostSyncClients();
 
       battleInterval = setInterval(() => {
         if (!localGameState.currentBattle) {
           clearInterval(battleInterval);
           return;
         }
+
         localGameState.currentBattle.timeLeft -= 1;
-        const tick = { type: 'TIMER_TICK', seconds: localGameState.currentBattle.timeLeft };
-        applyTimerTick(tick.seconds);
+        const tick = { type: 'TICK', seconds: localGameState.currentBattle.timeLeft };
+        renderBattleTimer(tick.seconds);
         clientConns.forEach(c => c.send(tick));
 
         if (localGameState.currentBattle.timeLeft <= 0) {
           clearInterval(battleInterval);
-          hostResolveBattle();
+          hostResolveDuel();
         }
       }, 1000);
     }
 
-    function hostProcessAnswer(playerId, optionIndex) {
+    function hostRegisterAnswer(playerId, optionIndex) {
       const battle = localGameState.currentBattle;
       if (!battle) return;
       if (playerId !== battle.attackerId && playerId !== battle.defenderId) return;
@@ -547,21 +826,21 @@
 
       battle.answers[playerId] = { option: optionIndex, time: 12 - battle.timeLeft };
 
-      const needDefender = battle.defenderId !== null;
+      const requiresDef = battle.defenderId !== null;
       const attDone = battle.answers[battle.attackerId] !== undefined;
-      const defDone = needDefender ? battle.answers[battle.defenderId] !== undefined : true;
+      const defDone = requiresDef ? battle.answers[battle.defenderId] !== undefined : true;
 
       if (attDone && defDone) {
         clearInterval(battleInterval);
-        hostResolveBattle();
+        hostResolveDuel();
       }
     }
 
-    function hostResolveBattle() {
+    function hostResolveDuel() {
       const battle = localGameState.currentBattle;
       if (!battle) return;
 
-      const target = localGameState.board[battle.toCountry];
+      const target = localGameState.board[battle.toId];
       const attAns = battle.answers[battle.attackerId];
       const defAns = battle.defenderId ? battle.answers[battle.defenderId] : null;
 
@@ -580,12 +859,14 @@
       if (attackerWon) {
         if (target.isCapital) {
           target.towers -= 1;
-          msg = `Vitória! A capital inimiga perdeu 1 peça de sua fortaleza (${target.towers} restantes).`;
+          msg = `Vitória militar! A fortaleza da capital perdeu 1 peça (${target.towers} restantes).`;
+          
           if (target.towers <= 0) {
             const fallen = localGameState.players.find(p => p.id === target.ownerId);
-            fallen.eliminated = true;
+            if (fallen) fallen.eliminated = true;
+
             for (const c in localGameState.board) {
-              if (localGameState.board[c].ownerId === fallen.id) {
+              if (localGameState.board[c].ownerId === target.ownerId) {
                 localGameState.board[c].ownerId = battle.attackerId;
                 localGameState.board[c].isCapital = false;
                 localGameState.board[c].towers = 1;
@@ -594,7 +875,7 @@
             target.ownerId = battle.attackerId;
             target.towers = 1;
             target.isCapital = false;
-            msg = `A CAPITAL CAIU! Todo o império de ${fallen.name} foi incorporado aos seus domínios!`;
+            msg = `A CAPITAL CAIU! Todo o império de ${fallen ? fallen.name : ''} foi anexado!`;
           }
         } else {
           target.ownerId = battle.attackerId;
@@ -602,18 +883,18 @@
           msg = `Território conquistado com sucesso!`;
         }
       } else {
-        msg = `O defensor manteve o território ou a resposta foi incorreta!`;
+        msg = `A invasão falhou ou o defensor resistiu com honra!`;
       }
 
-      const resPayload = { type: 'BATTLE_RESULT', message: msg };
-      applyBattleResult(msg);
-      clientConns.forEach(c => c.send(resPayload));
+      const res = { type: 'DUEL_RESULT', message: msg };
+      renderDuelOutcome(msg);
+      clientConns.forEach(c => c.send(res));
 
       localGameState.currentBattle = null;
-      hostPassTurn();
+      hostRotateTurn();
     }
 
-    function hostPassTurn() {
+    function hostRotateTurn() {
       let count = 0;
       do {
         localGameState.activeTurnIndex = (localGameState.activeTurnIndex + 1) % localGameState.players.length;
@@ -624,14 +905,14 @@
       if (active.length <= 1) {
         localGameState.phase = 'FINISHED';
         const winPayload = { type: 'GAME_OVER', winner: active[0] };
-        alert(`O imperador mundial é: ${active[0].name}`);
+        alert(`FIM DA GUERRA! O vencedor mundial supremo é: ${active[0].name}`);
         clientConns.forEach(c => c.send(winPayload));
       }
 
-      hostBroadcastState();
+      hostSyncClients();
     }
 
-    function handleHostPlayerDisconnect(peerId) {
+    function hostHandlePlayerExit(peerId) {
       const p = localGameState.players.find(x => x.id === peerId);
       if (p) {
         p.eliminated = true;
@@ -641,107 +922,106 @@
             localGameState.board[c].towers = 0;
           }
         }
-        hostBroadcastState();
+        hostSyncClients();
       }
     }
 
-    // --- RECEPTOR CLIENTE ---
-    function handleClientIncomingData(data) {
-      if (data.type === 'STATE_UPDATE') applyState(data.state);
-      if (data.type === 'TIMER_TICK') applyTimerTick(data.seconds);
-      if (data.type === 'BATTLE_RESULT') applyBattleResult(data.message);
-      if (data.type === 'GAME_OVER') alert(`FIM DE JOGO! O vencedor mundial foi: ${data.winner.name}`);
+    // --- RECEPTOR CLIENTE (PEER) ---
+    function clientHandleData(data) {
+      if (data.type === 'SYNC_STATE') applyGameState(data.state);
+      if (data.type === 'TICK') renderBattleTimer(data.seconds);
+      if (data.type === 'DUEL_RESULT') renderDuelOutcome(data.message);
+      if (data.type === 'GAME_OVER') alert(`FIM DE JOGO! Soberano mundial: ${data.winner.name}`);
       if (data.type === 'ERROR') alert(data.message);
     }
 
-    // --- ATUALIZAÇÕES VISUAIS DA INTERFACE ---
-    function applyState(state) {
+    // --- ATUALIZAÇÕES VISUAIS DA INTERFACE (MOBILE-READY) ---
+    function applyGameState(state) {
       localGameState = state;
-      renderBoard();
-      renderPlayers();
+      updateHUD();
+      drawTowersAndOwnership();
 
       const activePlayer = localGameState.players[localGameState.activeTurnIndex];
       const isMyTurn = activePlayer && activePlayer.id === myPeerId;
-      const promptEl = document.getElementById('action-prompt');
+      const ticker = document.getElementById('status-ticker');
 
       if (localGameState.phase === 'BATTLE') {
-        promptEl.innerText = isMyTurn ? 'SEU TURNO: Selecione um país seu para atacar.' : `Aguarde o turno de ${activePlayer ? activePlayer.name : '...'}`;
+        ticker.innerText = isMyTurn ? 'SUA VEZ: Toque no seu território e depois no alvo para atacar.' : `Aguardando a jogada de ${activePlayer ? activePlayer.name : '...'}`;
       }
 
       if (localGameState.currentBattle) {
-        openModal(localGameState.currentBattle);
+        openBattleModal(localGameState.currentBattle);
       } else {
-        closeModal();
+        closeBattleModal();
       }
     }
 
-    function applyTimerTick(seconds) {
-      document.getElementById('timer-bar').innerText = `Tempo: ${seconds}s`;
-    }
+    function updateHUD() {
+      const hud = document.getElementById('hud-players-container');
+      hud.innerHTML = '';
 
-    function applyBattleResult(msg) {
-      alert(msg);
-      closeModal();
-      selectedOrigin = null;
-      document.querySelectorAll('.country-path').forEach(p => p.classList.remove('country-selected'));
-    }
-
-    function renderPlayers() {
-      const list = document.getElementById('players-list');
-      list.innerHTML = '';
       localGameState.players.forEach((p, idx) => {
-        const isTurn = idx === localGameState.activeTurnIndex && localGameState.phase === 'BATTLE';
-        const div = document.createElement('div');
-        div.className = `player-badge ${isTurn ? 'active-badge' : ''}`;
-        div.innerHTML = `
-          <div class="player-color-box" style="background:${p.color};"></div>
-          <span>${p.name} ${p.id === myPeerId ? '<b>(Você)</b>' : ''} ${p.eliminated ? '<span style="color:#e53935;">[Derrotado]</span>' : ''}</span>
+        const isCurrentTurn = idx === localGameState.activeTurnIndex && localGameState.phase === 'BATTLE';
+        const card = document.createElement('div');
+        card.className = `player-card ${isCurrentTurn ? 'active-turn' : ''} ${p.eliminated ? 'eliminated' : ''}`;
+
+        // Contagem de territórios dominados
+        let territoriesCount = 0;
+        for (const k in localGameState.board) {
+          if (localGameState.board[k].ownerId === p.id) territoriesCount++;
+        }
+
+        card.innerHTML = `
+          <div class="player-name-row">
+            <div class="player-indicator" style="background:${p.color};"></div>
+            <span class="player-name">${p.name} ${p.id === myPeerId ? '(Você)' : ''}</span>
+          </div>
+          <span class="player-towers-count">${p.eliminated ? 'Eliminado' : `${territoriesCount} terras`}</span>
         `;
-        list.appendChild(div);
+        hud.appendChild(card);
       });
     }
 
-    function renderBoard() {
+    function drawTowersAndOwnership() {
       const towersLayer = document.getElementById('towers-layer');
       towersLayer.innerHTML = '';
 
       for (const countryId in localGameState.board) {
-        const country = localGameState.board[countryId];
+        const data = localGameState.board[countryId];
         const pathEl = document.getElementById(`c_${countryId}`);
 
         if (pathEl) {
-          if (country.ownerId) {
-            const owner = localGameState.players.find(p => p.id === country.ownerId);
-            pathEl.setAttribute('fill', owner ? owner.color : '#263238');
+          if (data.ownerId) {
+            const owner = localGameState.players.find(p => p.id === data.ownerId);
+            pathEl.setAttribute('fill', owner ? owner.color : 'var(--land-base)');
           } else {
-            pathEl.setAttribute('fill', '#263238');
+            pathEl.setAttribute('fill', 'var(--land-base)');
           }
         }
 
-        // Renderização precisa das pecinhas no centróide geográfico real do país
-        if (country.towers > 0 && countryCentroids[countryId]) {
+        // Renderiza as peças de torre empilhadas no centróide
+        if (data.towers > 0 && countryCentroids[countryId]) {
           const center = countryCentroids[countryId];
           const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
           g.setAttribute('class', 'tower-group');
 
-          // Blocos das peças empilhadas
-          for (let i = 0; i < country.towers; i++) {
+          for (let i = 0; i < data.towers; i++) {
             const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
             rect.setAttribute('x', center.x - 7);
             rect.setAttribute('y', center.y - (i * 6));
             rect.setAttribute('width', 14);
             rect.setAttribute('height', 5);
-            rect.setAttribute('class', 'tower-block');
+            rect.setAttribute('class', 'tower-brick');
             rect.setAttribute('rx', 1);
             g.appendChild(rect);
           }
 
-          // Se for capital, adiciona a bandeira dourada de três pontas no topo da terceira peça
-          if (country.isCapital) {
+          // Se for capital, renderiza a bandeira imperial de 3 pontas
+          if (data.isCapital) {
             const flag = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-            const topY = center.y - (country.towers * 6);
+            const topY = center.y - (data.towers * 6);
             flag.setAttribute('points', `${center.x},${topY - 8} ${center.x + 8},${topY - 4} ${center.x},${topY}`);
-            flag.setAttribute('class', 'capital-flag');
+            flag.setAttribute('class', 'flag-shape');
             g.appendChild(flag);
           }
 
@@ -750,8 +1030,8 @@
       }
     }
 
-    // --- INTERAÇÃO E BATALHA NO MAPA REAL ---
-    function handleCountryClick(countryId) {
+    // --- INTERAÇÃO TOUCH NO MAPA ---
+    function handleCountryTouch(countryId) {
       if (localGameState.phase !== 'BATTLE') return;
       const activePlayer = localGameState.players[localGameState.activeTurnIndex];
       if (!activePlayer || activePlayer.id !== myPeerId) return;
@@ -764,58 +1044,70 @@
           const el = document.getElementById(`c_${countryId}`);
           if (el) el.classList.add('country-selected');
           const name = COUNTRY_NAMES[countryId] || countryId;
-          document.getElementById('action-prompt').innerText = `Origem: ${name}. Agora clique no país alvo para atacar.`;
+          document.getElementById('status-ticker').innerText = `Origem: ${name}. Toque no país vizinho para invadir.`;
         }
       } else {
         if (selectedOrigin === countryId) {
           selectedOrigin = null;
-          document.querySelectorAll('.country-path').forEach(p => p.classList.remove('country-selected'));
-          document.getElementById('action-prompt').innerText = 'SEU TURNO: Selecione um país seu para atacar.';
+          document.querySelectorAll('.country-shape').forEach(p => p.classList.remove('country-selected'));
+          document.getElementById('status-ticker').innerText = 'SUA VEZ: Toque no seu território e depois no alvo para atacar.';
         } else {
-          // Dispara o ataque
+          // Despacha o Ataque
           if (isHost) {
-            hostProcessAttack(myPeerId, selectedOrigin, countryId);
+            hostExecuteAttack(myPeerId, selectedOrigin, countryId);
           } else {
-            hostConn.send({ type: 'ATTACK', fromCountry: selectedOrigin, toCountry: countryId });
+            hostConn.send({ type: 'ATTACK', from: selectedOrigin, to: countryId });
           }
         }
       }
     }
 
-    function openModal(battle) {
-      const modal = document.getElementById('question-modal');
-      const text = document.getElementById('question-text');
-      const optContainer = document.getElementById('options-container');
+    // --- MODAL DE COMBATE E PERGUNTAS ---
+    function openBattleModal(battle) {
+      const modal = document.getElementById('battle-modal');
+      const text = document.getElementById('battle-question-text');
+      const optionsBox = document.getElementById('battle-options-box');
 
       text.innerText = battle.question.text;
-      optContainer.innerHTML = '';
+      optionsBox.innerHTML = '';
 
       const isParticipant = battle.attackerId === myPeerId || battle.defenderId === myPeerId;
 
       battle.question.options.forEach((opt, idx) => {
         const btn = document.createElement('button');
-        btn.className = 'option-btn';
+        btn.className = 'opt-btn';
         btn.innerText = opt;
         btn.disabled = !isParticipant;
 
         btn.onclick = () => {
           if (isHost) {
-            hostProcessAnswer(myPeerId, idx);
+            hostRegisterAnswer(myPeerId, idx);
           } else {
             hostConn.send({ type: 'ANSWER', optionIndex: idx });
           }
-          Array.from(optContainer.children).forEach(b => b.disabled = true);
-          btn.style.background = '#8b6d3b';
+          Array.from(optionsBox.children).forEach(b => b.disabled = true);
+          btn.style.background = 'var(--gold-border)';
         };
 
-        optContainer.appendChild(btn);
+        optionsBox.appendChild(btn);
       });
 
-      modal.style.display = 'block';
+      modal.style.display = 'flex';
     }
 
-    function closeModal() {
-      document.getElementById('question-modal').style.display = 'none';
+    function renderBattleTimer(sec) {
+      document.getElementById('battle-timer').innerText = `${sec}s`;
+    }
+
+    function renderDuelOutcome(msg) {
+      alert(msg);
+      closeBattleModal();
+      selectedOrigin = null;
+      document.querySelectorAll('.country-shape').forEach(p => p.classList.remove('country-selected'));
+    }
+
+    function closeBattleModal() {
+      document.getElementById('battle-modal').style.display = 'none';
     }
   </script>
 </body>
